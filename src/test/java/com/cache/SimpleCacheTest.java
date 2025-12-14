@@ -5,6 +5,11 @@ import org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public class SimpleCacheTest {
@@ -121,6 +126,91 @@ public class SimpleCacheTest {
 
         cache.remove(key);
         assertFalse(cache.containsKey(key), "移除数据后不应该包含该键");
+    }
+
+    /**
+     * 测试并发put操作 - 可能丢失数据
+     * @throws InterruptedException
+     */
+    @Test
+    void testConcurrentPut() throws InterruptedException {
+        final SimpleCache<String, Integer> cache = new SimpleCache<>(100000);
+        final int threadCount = 10;
+        final int putCount = 1000;
+
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+
+        for (int i = 0; i < threadCount; i++) {
+            final int threadId = i;
+            executor.execute(() -> {
+                try {
+                    for (int j = 0; j < putCount; j++) {
+                        String key = "key" + threadId + "_" + j;
+                        cache.put(key, threadId*1000+j);
+                    }
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        latch.await();
+        executor.shutdown();
+        int expectedSize = threadCount * putCount;
+        int actualSize = cache.size();
+        System.out.println("预期大小:" + expectedSize);
+        System.out.println("实际大小:" + actualSize);
+        System.out.println("丢失数据:" + (expectedSize - actualSize));
+
+        // 验证: 至少检查一些数据是否存在
+        AtomicInteger foundCount = new AtomicInteger(0);
+        for (int i = 0; i < threadCount; i++) {
+            for (int j = 0; j < putCount; j++) {
+                String key = "key-" + i + "_" + j;
+                if(cache.get(key) != null) {
+                    foundCount.incrementAndGet();
+                }
+            }
+        }
+        System.out.println("找到的数据数量:" + foundCount.get());
+        assertTrue(foundCount.get() > 0, "应该至少能找到一些数据");
+    }
+
+    /**
+     * 测试并发get和put - 可能读取到不一致数据
+     * @throws InterruptedException
+     */
+    @Test
+    void testConcurrentGetAndPut() throws InterruptedException {
+        final SimpleCache<String, Integer> cache = new SimpleCache<>();
+        final String testKey = "testKey";
+        final int threadCount = 10;
+
+        cache.put(testKey, 0);
+
+        ExecutorService executor = Executors.newFixedThreadPool(threadCount);
+        CountDownLatch latch = new CountDownLatch(threadCount);
+
+        for (int i = 0; i < threadCount; i++) {
+            executor.execute(() -> {
+                try {
+                    for (int j = 0; j < 100; j++) {
+                        Integer current = cache.get(testKey);
+                        if (current != null) {
+                            cache.put(testKey, current + 1);
+                        }
+                    }
+                } finally {
+                    latch.countDown();
+                }
+            });
+        }
+        latch.await();
+        executor.shutdown();
+        // 理论上最终值应该是threadCount * 100
+        Integer finalValue = cache.get(testKey);
+        System.out.println("最终值：" + finalValue);
+        System.out.println("期望值：" + (threadCount * 100));
     }
 
 }
