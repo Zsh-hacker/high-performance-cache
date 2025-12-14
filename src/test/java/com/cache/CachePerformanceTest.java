@@ -76,6 +76,7 @@ class CachePerformanceTest {
         System.out.printf("写操作比例: %.1f%%\n", writeRatio * 100);
 
         testCacheReadWrite(new SimpleCache<>(), "SimpleCache", threadCount, operationsPerThread, writeRatio);
+        testCacheReadWrite(new ReadWriteLockCache<>(), "ReadWriteLockCache", threadCount, operationsPerThread, writeRatio);
         testCacheReadWrite(new SynchronizedCache<>(), "SynchronizedCache", threadCount, operationsPerThread, writeRatio);
         testCacheReadWrite(new ReenTrantLockCache<>(), "ReentrantLockCache", threadCount, operationsPerThread, writeRatio);
         testCacheReadWrite(new ConcurrentCache<>(), "ConcurrentCache", threadCount, operationsPerThread, writeRatio);
