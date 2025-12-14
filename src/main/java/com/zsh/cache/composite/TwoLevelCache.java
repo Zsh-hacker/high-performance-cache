@@ -1,9 +1,20 @@
-package com.zsh.cache.decorator.composite;
+package com.zsh.cache.composite;
 
 import com.zsh.cache.Cache;
 
 import java.util.function.Function;
 
+/**
+ * 二级缓存实现（组合模式）
+ * L1：快速但容量小（如Caffeine、Guava Cache）
+ * L2：较慢但容量大（如Redis、数据库）
+ *
+ * 读策略：L1 -> L2 -> 加载器
+ * 写策略：Wrote-Through（同时写入两级）
+ *
+ * @param <K>
+ * @param <V>
+ */
 public class TwoLevelCache<K, V> implements Cache<K, V> {
 
     private final Cache<K, V> level1;   // 一级缓存（快速、小容量）

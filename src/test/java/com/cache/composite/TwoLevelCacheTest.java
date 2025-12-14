@@ -3,7 +3,7 @@ package com.cache.composite;
 import com.zsh.cache.Cache;
 import com.zsh.cache.LRUCache;
 import com.zsh.cache.SimpleCache;
-import com.zsh.cache.decorator.composite.TwoLevelCache;
+import com.zsh.cache.composite.TwoLevelCache;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
